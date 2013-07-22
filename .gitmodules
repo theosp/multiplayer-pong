@@ -1,0 +1,3 @@
+[submodule "static/javascript-pong"]
+	path = static/javascript-pong
+	url = git@github.com:theosp/javascript-pong.git

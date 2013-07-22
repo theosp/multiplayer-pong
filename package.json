@@ -1,0 +1,26 @@
+{
+  "name": "multiplayer-pong",
+  "main": "./lib/server",
+  "version": "0.1.0",
+  "description": "Play pong",
+  "homepage": "https://github.com/theosp/multiplayer-pong",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/theosp/multiplayer-pong.git"
+  },
+  "author": {
+    "name": "Daniel Chcouri",
+    "email": "333222@gmail.com"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "dependencies" : {
+    "socket.io": "0.9.x",
+    "express": "3.3.x",
+    "underscore": "1.5.x",
+    "nconf": "0.6.x"
+  },
+  "license": "PUBLIC DOMAIN",
+  "readmeFilename": "README.md"
+}

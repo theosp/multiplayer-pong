@@ -1,1 +1,88 @@
-Hello
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+ 
+    <head>        
+        <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />        
+        <title>Multiplayer Pong</title>
+
+        <script type="text/javascript" src="/remote_control/jquery/jquery.min.js"></script>
+        <script type="text/javascript" src="/remote_control/jquery/jquery-ui.min.js"></script>
+
+        <script type="text/javascript" src="/remote_control/gyro/js/gyro.min.js"></script>
+
+        <script src="/socket.io/socket.io.js"></script>
+
+        <script type="text/javascript" charset="utf-8">
+        (function () {
+            var getParameterByName = function (name) {
+                name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+                var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+                results = regex.exec(location.search);
+                return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+            }
+
+            var handle_error = function (error) {
+                alert(JSON.stringify(error));
+            }
+
+            var update_controller = function (beta) {
+                var direction;
+
+                var max_angle = 30;
+
+                if (beta > 0) {
+                    direction = Math.min(beta, max_angle)
+                }
+
+                if (beta < 0) {
+                    direction = Math.max(beta, -max_angle)
+                }
+
+                direction /= max_angle;
+
+                $("#controller").html(("" + direction).substring(0, 4));
+            }
+
+            gyro.frequency = 10;
+
+            gyro.startTracking(function(o) {
+                if (o.beta === 0 || o.beta === null) {
+                    $("#gyro_status").html("Not supported");
+                    return;
+                }
+
+                update_controller(o.beta);
+
+                $("#gyro_status").html(("" + o.beta).substring(0, 4));
+            });
+
+            var socket = io.connect('http://daniel123.fwd.wf/agent');
+
+            socket.on("error", function (error) {
+                handle_error(error);
+            });
+
+            var field_id = getParameterByName("field_id");
+            if (field_id !== "") {
+                socket.emit("new_controller", parseInt(field_id, 10));
+            } else {
+                handle_error("no field_id");
+            }
+
+            socket.on("controller_registered", function () {
+                alert("registered!");
+            });
+        })();
+        </script>
+
+    </head>
+  
+    <body>
+        <div id="controller"></div>
+
+        <div>Info: Gyro: <span id="gyro_status"></span></div>
+    </body>
+
+</html>

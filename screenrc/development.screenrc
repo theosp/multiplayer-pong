@@ -1,0 +1,12 @@
+screen -t server 0 bash -c 'echo "Launchning server"; echo "$ nodemon lib/server.js"; sudo nodemon lib/server.js; bash'
+#split
+#focus
+#screen -t tests 1 bash -c 'echo "Launchning restricted api server: $RESTRICTED_API_SERVER_ROOT_URL"; echo "$ nodemon --watch /var/backlink-sonar/ app.js"; nodemon --watch /var/backlink-sonar/servers/restricted_api/ app.js; bash'
+#split
+#focus
+#screen -t api-docs 2 bash -c 'echo "Launchning api docs server"; echo "$ sudo -E ./launch_test_server.bash"; sudo -E ./launch_test_server.bash; bash'
+#focus
+#focus
+#focus
+
+# vim:ft=bash:fdm=marker:fmr={{{,}}}:

@@ -7,15 +7,67 @@
         <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />        
         <title>Multiplayer Pong</title>
 
-        <script type="text/javascript" src="/remote_control/jquery/jquery.min.js"></script>
-        <script type="text/javascript" src="/remote_control/jquery/jquery-ui.min.js"></script>
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+
+        <script src="/remote_control/jquery/jquery.min.js"></script>
+        <script src="/remote_control/jquery/jquery-ui.min.js"></script>
+        <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/trontastic/jquery-ui.css" type="text/css" /> 
+
+        <script type="text/javascript" src="/remote_control/jquery-ui-touch-punch/jquery.ui.touch-punch.min.js"></script>
 
         <script type="text/javascript" src="/remote_control/gyro/js/gyro.min.js"></script>
+
+        <script type="text/javascript" src="/config.js" ></script>
 
         <script src="/socket.io/socket.io.js"></script>
 
         <script type="text/javascript" charset="utf-8">
         (function () {
+            var controller_side = 0;
+            var position_interval = null;
+
+            var clear_position_interval = function () {
+                clearInterval(position_interval);
+            };
+
+            var socket = io.connect('http://' + CONFIG.domain + '/agent');
+
+            var message = function (m) {
+                $("#joystick p").html(m);
+            };
+
+            var handle_error = function (error) {
+                message(error);
+                clear_position_interval();
+            }
+
+            socket.on("disconnect", function (error) {
+                $("#connection_status").html("Disconnected");
+                clear_position_interval();
+            });
+
+            socket.on("error", function (error) {
+                handle_error(error.error);
+            });
+
+            socket.on("controller_registered", function () {
+                $("#connection_status").html("Connected");
+
+                message("Waiting for game to begin");
+            });
+
+            socket.on("start", function (side) {
+                controller_side = side;
+
+                if (side === 0) {
+                    message("<=== Left Team Play!");
+                }
+
+                if (side === 1) {
+                    message("Right Team Play! ===>");
+                }
+            });
+
             var getParameterByName = function (name) {
                 name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
                 var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
@@ -23,66 +75,52 @@
                 return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
             }
 
-            var handle_error = function (error) {
-                alert(JSON.stringify(error));
-            }
+            
+            $(window).ready(function () {
+                var $joystick = $("#joystick");
 
-            var update_controller = function (beta) {
-                var direction;
+                $joystick.css("top", ($joystick.parent().outerHeight() / 2) - ($joystick.outerHeight() / 2))
+                $("#middle").css("top", ($joystick.parent().outerHeight() / 2));
 
-                var max_angle = 30;
+                $joystick.draggable({ axis: "y", containment: "parent", revert: true });
 
-                if (beta > 0) {
-                    direction = Math.min(beta, max_angle)
+                // register controller
+                var field_id = getParameterByName("field_id");
+                if (field_id !== "") {
+                    socket.emit("new_controller", parseInt(field_id, 10));
+                } else {
+                    handle_error("no field_id");
                 }
 
-                if (beta < 0) {
-                    direction = Math.max(beta, -max_angle)
-                }
+                position_interval = setInterval(function () {
+                    var $joystick = $("#joystick"),
+                        $joystick_parent = $joystick.parent();
 
-                direction /= max_angle;
+                    var joystick_height = $joystick.outerHeight(),
+                        joystick_position = $joystick.position().top,
+                        parent_height = $joystick_parent.outerHeight() - joystick_height;
 
-                $("#controller").html(("" + direction).substring(0, 4));
-            }
-
-            gyro.frequency = 10;
-
-            gyro.startTracking(function(o) {
-                if (o.beta === 0 || o.beta === null) {
-                    $("#gyro_status").html("Not supported");
-                    return;
-                }
-
-                update_controller(o.beta);
-
-                $("#gyro_status").html(("" + o.beta).substring(0, 4));
-            });
-
-            var socket = io.connect('http://daniel123.fwd.wf/agent');
-
-            socket.on("error", function (error) {
-                handle_error(error);
-            });
-
-            var field_id = getParameterByName("field_id");
-            if (field_id !== "") {
-                socket.emit("new_controller", parseInt(field_id, 10));
-            } else {
-                handle_error("no field_id");
-            }
-
-            socket.on("controller_registered", function () {
-                alert("registered!");
+                    socket.emit("position", field_id, controller_side, joystick_position / parent_height);
+                }, 100);
             });
         })();
         </script>
 
     </head>
   
-    <body>
-        <div id="controller"></div>
+    <body style="-webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;">
+        <div id="header" style="position: absolute; top: 0; right: 0; left: 0; height: 20px; background-color: black; color: white; text-align: center; font-size: 18px; padding: 10px 0;font-weight: bold;font-family: sans;">Multiplayer Pong</div>
 
-        <div>Info: Gyro: <span id="gyro_status"></span></div>
+        <div id="controller" style="position: absolute; top: 40px; right: 0; left: 0; bottom: 30px; background-color: grey; background-image: url(/remote_control/media/background.png); text-align: center;">
+            <div id="middle" style="border-bottom: 1px dashed black; position: absolute; right: 0; left: 0;"></div>
+            <div id="joystick" class="draggable ui-widget-content">
+                <p>Loading...</p>
+            </div>
+        </div>
+
+        <div id="footer" style="position: absolute; bottom: 0; right: 0; left: 0; height: 22px; padding: 4px; background-color: black; color: white; font-weight: bold; color: white;">
+            Connection status: <span id="connection_status">Init...</span>
+        </div>
     </body>
 
 </html>

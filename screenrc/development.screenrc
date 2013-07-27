@@ -1,6 +1,10 @@
+# Run this screenrc with under the project's root
 screen -t server 0 bash -c 'echo "Launchning server"; echo "$ nodemon lib/server.js"; sudo nodemon lib/server.js; bash'
-#split
-#focus
+split
+focus
+screen -t tests 1 bash -c "echo 'expose project to the world with forward.hq'; while :; do sleep 1; forward $(cat config/config.json | grep port | sed -e 's/[^0-9]*//g'); done; bash"
+focus
+focus
 #screen -t tests 1 bash -c 'echo "Launchning restricted api server: $RESTRICTED_API_SERVER_ROOT_URL"; echo "$ nodemon --watch /var/backlink-sonar/ app.js"; nodemon --watch /var/backlink-sonar/servers/restricted_api/ app.js; bash'
 #split
 #focus

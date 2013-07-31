@@ -1,8 +1,8 @@
 {
   "name": "multiplayer-pong",
-  "main": "./lib/server",
-  "version": "0.1.0",
-  "description": "Play pong",
+  "main": "./server/server",
+  "version": "0.2.0",
+  "description": "Use mobile phones as remote controllers for Pong game. Extends: jakesgordon/javascript-pong",
   "homepage": "https://github.com/theosp/multiplayer-pong",
   "repository": {
     "type": "git",
@@ -18,9 +18,8 @@
   "dependencies" : {
     "socket.io": "0.9.x",
     "express": "3.3.x",
-    "underscore": "1.5.x",
     "nconf": "0.6.x"
   },
-  "license": "PUBLIC DOMAIN",
+  "license": "See ./LICENSE",
   "readmeFilename": "README.md"
 }

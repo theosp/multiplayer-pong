@@ -1,5 +1,5 @@
 # Run this screenrc with under the project's root
-screen -t server 0 bash -c 'echo "Launchning server"; echo "$ nodemon lib/server.js"; sudo nodemon lib/server.js; bash'
+screen -t server 0 bash -c 'echo "Launchning server"; echo "$ nodemon server/server.js"; sudo nodemon server/server.js; bash'
 split
 focus
 screen -t tests 1 bash -c "echo 'expose project to the world with forward.hq'; while :; do sleep 1; forward $(cat config/config.json | grep port | sed -e 's/[^0-9]*//g'); done; bash"

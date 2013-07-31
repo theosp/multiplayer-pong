@@ -4,15 +4,17 @@ var io = require('socket.io'),
     fs = require('fs'),
     express = require('express');
 
-function cleanArray(actual){
-  var newArray = new Array();
-  for(var i = 0; i<actual.length; i++){
-      if (typeof actual[i] !== 'undefined') {
-        newArray.push(actual[i]);
-      }
-  }
-  return newArray;
-};
+function cleanArray(actual) {
+    var i, newArray = [];
+
+    for (i = 0; i < actual.length; i++) {
+        if (typeof actual[i] !== 'undefined') {
+            newArray.push(actual[i]);
+        }
+    }
+
+    return newArray;
+}
 
 // load config from argv/environment variables/config.json
 nconf.argv()
@@ -24,7 +26,7 @@ var app = express();
 
 app.get("/config.js", function (req, res) {
     fs.readFile(path.resolve(__dirname, '../config/config.json'), function (err, data) {
-        if (err) throw err;
+        if (err) { throw err };
 
         data = JSON.parse(data);
         // for security measures, set the params from config.json explicitly.
@@ -38,17 +40,29 @@ app.get("/config.js", function (req, res) {
 });
 
 app.use("/remote_control", express.static(path.resolve(__dirname, '../static/remote_control')));
-app.use("/field", express.static(path.resolve(__dirname, '../static/javascript-pong')));
+app.use("/field", express.static(path.resolve(__dirname, '../static/field')));
+app.use("/libs", express.static(path.resolve(__dirname, '../static/libs')));
 
 // /(remote_control|field) -> /$1/ (add trailing slash, keep get params)
-app.get(/\/(remote_control|field)$/, function (req, res) {
+app.get(/^\/(remote_control|field)$/, function (req, res) {
     res.redirect(303, req.path + '/' + req.originalUrl.replace(/[^?]*/, ""));
-})
+});
+
+// shortcuts / -> /field/
+app.get(/^\/?$/, function (req, res) {
+    res.redirect(302, '/field/');
+});
+
+// shortcuts /r/ -> /remote_control/?field_id={field_id}
+app.get(/^\/r\/(\d*)\/?$/, function (req, res) {
+    res.redirect(302, '/remote_control/?field_id=' + req.route.params[0]);
+});
 
 var http_server = app.listen(nconf.get("port"));
 
 // socket.io
 io = io.listen(http_server);
+io.set("log level", nconf.get("socket_io_log_level"));
 
 var fields = [],
     controllers = {};
@@ -129,7 +143,7 @@ io.of("/agent")
 
             var field_socket = fields[field_id];
             if (typeof field_socket === 'undefined') {
-                socket.emit("error", {error: "field does not exist", code: "field_not_exists"});
+                socket.emit("error", {error: "Field does not exist", code: "field_not_exists"});
                 socket.disconnect();
 
                 return;
@@ -165,9 +179,13 @@ io.of("/agent")
         socket.on('direction', function (field_id, controller_id, side, direction) {
             var field_socket = fields[field_id];
             if (typeof field_socket === 'undefined') {
-                socket.emit("error", {error: "field does not exist", code: "field_not_exists"});
+                socket.emit("error", {error: "Field does not exist", code: "field_not_exists"});
                 socket.disconnect();
 
+                return;
+            }
+
+            if (typeof controllers[field_id][controller_id] === 'undefined') {
                 return;
             }
 

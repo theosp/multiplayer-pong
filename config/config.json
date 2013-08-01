@@ -1,6 +1,6 @@
 {
     "domain": "127.0.0.1",
     "port": 80,
-    "socket_io_log_level": 0,
+    "socket_io_log_level": 1,
     "winning_score": 10
 }

@@ -1,20 +1,31 @@
 # Multiplayer Pong
 
-Multiplayer pong 
+Use mobile phones as remote controllers for a Pong game. 
 
 # Installation
 
-Clone the code from github and run:
+From github:
 
-    npm install
+    $ git clone .../multiplayer-pong.git
+    $ cd multiplayer-pong
+    $ git submodule init
+    $ git submodule update
+    $ npm install
 
-to install the dependencies
+# Usage
 
-# Development
+1. Edit config/config.json:
 
-sad
+Set domain to your host domain or nat ip.
 
-# API Docs
+2. Run the server:
 
+    $ sudo node server/server.js
 
-# Testcases
+3. On the browser go to:
+
+    http://your-domain/
+
+# Notes
+
+Tested only on node v0.10.13

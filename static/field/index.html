@@ -28,6 +28,9 @@
 
         <script type="text/javascript">
             (function () {
+                var field_id = null;
+                var game_type = -1;
+
                 Game.ready(function() {
                     $(window).ready(function () {
                         var calcCanvasHeight = function () {
@@ -45,10 +48,46 @@
                         });
 
                         pong = Game.start('game', Pong, {
-                            sound:             true,
-                            stats:             false,
-                            footprints:    false,
-                            predictions: false
+                            sound: true,
+                            stats: false,
+                            footprints: false,
+                            predictions: false,
+                            winning_score: CONFIG.winning_score || 9,
+                            on_win: function (playerNo) {
+                                $("#qr-code").remove();
+                                $("#controller_url").remove();
+
+                                if (game_type === 1) {
+                                    $("#game_status").html((playerNo === 0 ? "You Win!" : "You Lost"));
+                                    $("#dialog-message .caption").html("Players");
+                                    $("#dialog-message").dialog({
+                                        buttons: {
+                                            "Play again": function() {
+                                                pong.start(1);
+
+                                                $( this ).dialog( "close" );
+                                            }
+                                        }
+                                    });
+                                }
+
+                                if (game_type === 2) {
+                                    socket.emit("win", field_id, playerNo);
+
+                                    $("#game_status").html((playerNo === 0 ? "Left" : "Right") + " Team Wins");
+                                    $("#dialog-message .caption").html("Players Left");
+                                    $("#dialog-message").dialog({
+                                        buttons: {
+                                            "Start next round": function() {
+                                                socket.emit("start", 2);
+                                                pong.start(2);
+
+                                                $( this ).dialog( "close" );
+                                            }
+                                        }
+                                    });
+                                }
+                            }
                         });
 
                         $("#dialog-message").dialog({
@@ -57,12 +96,16 @@
                             width: 400,
                             buttons: {
                                 "Against AI": function() {
+                                    game_type = 1;
+
                                     socket.emit("start", 1);
                                     pong.start(1);
 
                                     $( this ).dialog( "close" );
                                 },
-                                "Against Each Other": function() {
+                                "Multiplayer Pong!": function() {
+                                    game_type = 2;
+
                                     socket.emit("start", 2);
                                     pong.start(2);
 
@@ -75,7 +118,9 @@
 
                 socket.emit("new_field");
                 
-                socket.on("field_registered", function (field_id) {
+                socket.on("field_registered", function (id) {
+                    field_id = id;
+
                     var controller_url = "http://" + CONFIG.domain + "/r/" + field_id;
                     var $qrcode = $("#qr-code");
                     var qr_size = 250;
@@ -106,15 +151,32 @@
                       paddle.moveDown();
                     }
                 });
+
+                socket.on("winner", function () {
+                    $("#game_status").html("We have a winner!");
+                    $("#connections_status").remove();
+
+                    $("#dialog-message").dialog({
+                        buttons: {
+                            "Try beat AI": function() {
+                                socket.emit("start", 1);
+                                pong.start(1);
+
+                                $( this ).dialog( "close" );
+                            }
+                        }
+                    });
+                });
             })();
         </script>
     </head> 
      
     <body style="background-color: black; padding: 0; margin: 0; overflow: auto; text-align: center;"> 
         <div id="dialog-message" title="Multiplayer Pong" style="text-align: center; font-size: 25px;">
+            <div id="game_status" style="font-weight: bold;"></div>
             <div id="qr-code">Loading QR Code...</div>
-            <span id="controller_url" style="font-weight: bold;"></span><br />
-            <div style="text-align: center; margin-top: 10px;">Connected players: <span id="connected_players" style="font-weight: bold;">0</span></div>
+            <span id="controller_url" style="font-weight: bold;"></span>
+            <div id="connections_status" style="text-align: center; margin-top: 10px;"><span class="caption">Connected players</span>: <span id="connected_players" style="font-weight: bold;">0</span></div>
         </div>
     </body> 
 </html>

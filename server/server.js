@@ -26,12 +26,15 @@ var app = express();
 
 app.get("/config.js", function (req, res) {
     fs.readFile(path.resolve(__dirname, '../config/config.json'), function (err, data) {
-        if (err) { throw err };
+        if (err) {
+            throw err;
+        }
 
         data = JSON.parse(data);
         // for security measures, set the params from config.json explicitly.
         data = {
             domain: data.domain,
+            winning_score: data.winning_score
         };
 
         res.header("Content-Type", "text/javascript");
@@ -67,15 +70,19 @@ io.set("log level", nconf.get("socket_io_log_level"));
 var fields = [],
     controllers = {};
 
-var for_each_controller = function (field_id, cb) {
+var for_each_controller = function (field_id, cb, done_cb) {
         if (typeof controllers[field_id] !== 'undefined') {
             var i;
             for (i = 0; i < controllers[field_id].length; i++) {
                 var field_controller = controllers[field_id][i];
             
                 if (typeof field_controller !== 'undefined') {
-                    cb(field_controller);
+                    cb(field_controller, i); // cb(field_controller, controller_id);
                 }
+            }
+
+            if (typeof done_cb !== 'undefined') {
+                done_cb();
             }
         }
     },
@@ -83,6 +90,44 @@ var for_each_controller = function (field_id, cb) {
         for_each_controller(field_id, function (field_controller) {
             field_controller.socket.emit(event, event_args);
         });
+    },
+    getFieldSocket = function (socket, field_id, disconnect_socket_if_not_found) {
+        if (typeof disconnect_socket_if_not_found === 'undefined') {
+            disconnect_socket_if_not_found = true;
+        }
+
+        var field_socket = fields[field_id];
+        if (typeof field_socket === 'undefined') {
+            if (disconnect_socket_if_not_found === true) {
+                socket.disconnect();
+            }
+
+            return false;
+        }
+
+        return field_socket;
+    },
+    removeController = function (field_id, controller_id, socket, disconnect_controller) {
+        if (typeof disconnect_controller === 'undefined') {
+            disconnect_controller = true;
+        }
+
+        var field_socket = getFieldSocket(socket, field_id, false);
+        if (field_socket === false) {
+            return;
+        }
+
+        if (typeof controllers[field_id] === 'object') {
+            if (typeof controllers[field_id][controller_id] === 'object') {
+                if (disconnect_controller === true) {
+                    controllers[field_id][controller_id].socket.disconnect();
+                }
+
+                delete controllers[field_id][controller_id];
+
+                io.log.debug("controller disconnected and removed: " + controller_id + "; field_id: " + field_id);
+            }
+        }
     };
 io.of("/agent")
     .on('connection', function (socket) {
@@ -130,7 +175,7 @@ io.of("/agent")
                 var i = 0;
                 for_each_controller(field_id, function (field_controller) {
                     var side = i++ % type;
-                    field_controller.socket.emit("start", side );
+                    field_controller.socket.emit("start", side);
                     field_controller.side = side;
                 });
             });
@@ -141,10 +186,9 @@ io.of("/agent")
         socket.on('new_controller', function (field_id) {
             var self = this;
 
-            var field_socket = fields[field_id];
-            if (typeof field_socket === 'undefined') {
+            var field_socket = getFieldSocket(socket, field_id);
+            if (field_socket === false) {
                 socket.emit("error", {error: "Field does not exist", code: "field_not_exists"});
-                socket.disconnect();
 
                 return;
             }
@@ -165,23 +209,46 @@ io.of("/agent")
                 field_socket.emit("controller_connected");
 
                 socket.on("disconnect", function () {
-                    io.log.debug("controller disconnected and removed: " + controller_id);
+                    removeController(field_id, controller_id, socket, false);
 
                     field_socket.emit("controller_disconnected");
-
-                    if (typeof controllers[field_id] === 'object') {
-                        delete controllers[field_id][controller_id];
-                    }
                 });
             });
         });
 
-        socket.on('direction', function (field_id, controller_id, side, direction) {
-            var field_socket = fields[field_id];
-            if (typeof field_socket === 'undefined') {
-                socket.emit("error", {error: "Field does not exist", code: "field_not_exists"});
-                socket.disconnect();
+        socket.on('win', function (field_id, side) {
+            io.log.debug("Round end on field: " + field_id + "; Winning side: " + side);
 
+            var field_socket = getFieldSocket(socket, field_id);
+            if (field_socket === false) {
+                return;
+            }
+
+            var controllers_left_in_field = [];
+            for_each_controller(field_id,
+                function (field_controller, controller_id) {
+                    if (field_controller.side === side) {
+                        field_controller.socket.emit("round_end", true);
+
+                        controllers_left_in_field.push(field_controller);
+                    } else {
+                        field_controller.socket.emit("round_end", false);
+
+                        removeController(field_id, controller_id, socket);
+                    }
+                }, function () {
+                    if (controllers_left_in_field.length === 1) {
+                        field_socket.emit("winner");
+                        controllers_left_in_field[0].socket.emit("winner");
+                    }
+                }
+            );
+
+        });
+
+        socket.on('direction', function (field_id, controller_id, side, controller_direction) {
+            var field_socket = getFieldSocket(socket, field_id);
+            if (field_socket === false) {
                 return;
             }
 
@@ -189,27 +256,27 @@ io.of("/agent")
                 return;
             }
 
-            controllers[field_id][controller_id].direction = direction;
+            controllers[field_id][controller_id].direction = controller_direction;
 
             var controllers_directions = cleanArray(controllers[field_id].map(function (controller) {
                 if (typeof controller === 'undefined') {
-                   return undefined;
+                    return undefined;
                 }
 
                 if (controller.side !== side) {
-                   return undefined;
+                    return undefined;
                 }
 
                 return controller.direction;
             }));
 
-            var direction = controllers_directions.reduce(function(a, b) { return a + b }, 0) / controllers_directions.length;
+            var direction = controllers_directions.reduce(function (a, b) { return a + b; }, 0) / controllers_directions.length;
             if (direction > 0) {
-                direction = 1
+                direction = 1;
             }
 
             if (direction < 0) {
-                direction = -1
+                direction = -1;
             }
 
             field_socket.emit("direction", side, direction);

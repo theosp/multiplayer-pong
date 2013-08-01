@@ -30,7 +30,7 @@
         
         <script type="text/javascript" charset="utf-8">
         (function () {
-            var controller_side = 0;
+            var controller_side = -1;
             var controller_id = null;
 
             var socket = io.connect('http://' + CONFIG.domain + '/agent');
@@ -57,14 +57,30 @@
                 message("Waiting for game to begin");
             });
 
-            socket.on("start", function (side) {
-                controller_side = side;
+            socket.on("round_end", function (my_team_own) {
+                controller_side = -1;
 
-                if (side === 0) {
+                if (my_team_own === true) {
+                    message("Your team own! Waiting for next round");
+                } else {
+                    message("Your team lost :(");
+                }
+            });
+
+            socket.on("winner", function (my_team_own) {
+                message("You own the game!");
+            });
+
+            socket.on("start", function (side) {
+                if (typeof side !== 'undefined') {
+                    controller_side = side;
+                }
+
+                if (controller_side === 0) {
                     message("&#8656; Left Team Play!");
                 }
 
-                if (side === 1) {
+                if (controller_side === 1) {
                     message("Right Team Play! &#8658;");
                 }
             });

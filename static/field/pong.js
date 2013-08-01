@@ -56,19 +56,21 @@ Pong = {
 
   initialize: function(runner, cfg) {
     Game.loadImages(Pong.Images, function(images) {
-      this.cfg         = cfg;
-      this.runner      = runner;
-      this.width       = runner.width;
-      this.height      = runner.height;
-      this.images      = images;
-      this.playing     = false;
-      this.scores      = [0, 0];
-      this.menu        = Object.construct(Pong.Menu,   this);
-      this.court       = Object.construct(Pong.Court,  this);
-      this.leftPaddle  = Object.construct(Pong.Paddle, this);
-      this.rightPaddle = Object.construct(Pong.Paddle, this, true);
-      this.ball        = Object.construct(Pong.Ball,   this);
-      this.sounds      = Object.construct(Pong.Sounds, this);
+      this.cfg           = cfg;
+      this.runner        = runner;
+      this.width         = runner.width;
+      this.height        = runner.height;
+      this.images        = images;
+      this.playing       = false;
+      this.scores        = [0, 0];
+      this.on_win        = cfg.on_win;
+      this.winning_score = cfg.winning_score || 9;
+      this.menu          = Object.construct(Pong.Menu,   this);
+      this.court         = Object.construct(Pong.Court,  this);
+      this.leftPaddle    = Object.construct(Pong.Paddle, this);
+      this.rightPaddle   = Object.construct(Pong.Paddle, this, true);
+      this.ball          = Object.construct(Pong.Ball,   this);
+      this.sounds        = Object.construct(Pong.Sounds, this);
       this.runner.start();
     }.bind(this));
   },
@@ -106,7 +108,11 @@ Pong = {
   goal: function(playerNo) {
     this.sounds.goal();
     this.scores[playerNo] += 1;
-    if (this.scores[playerNo] == 9) {
+    if (this.scores[playerNo] == this.winning_score) {
+      if (typeof this.on_win !== 'undefined') {
+        this.on_win(playerNo);
+      }
+
       this.menu.declareWinner(playerNo);
       this.stop();
     }

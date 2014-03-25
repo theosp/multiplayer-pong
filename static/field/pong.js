@@ -90,6 +90,10 @@ Pong = {
     }
   },
 
+  setScore: function (scores) {
+      this.scores = scores;
+  },
+
   stop: function(ask) {
     if (this.playing) {
       if (!ask || this.runner.confirm('Abandon game in progress ?')) {

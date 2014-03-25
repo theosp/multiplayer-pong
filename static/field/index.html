@@ -82,6 +82,11 @@
                                                 socket.emit("start", 2);
                                                 pong.start(2);
 
+                                                setTimeout(function () {
+                                                    // avoid the risk that a certain player didn't have enough time to get ready - init scores after first second
+                                                    pong.setScore([0, 0]);
+                                                }, 1000);
+
                                                 $( this ).dialog( "close" );
                                             }
                                         }
